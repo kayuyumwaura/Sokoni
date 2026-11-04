@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Sokoni.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "admin",
+      "applicationUrl": "http://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

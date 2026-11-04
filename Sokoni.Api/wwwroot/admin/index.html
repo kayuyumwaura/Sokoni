@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sokoni Dashboard</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --surface: #ffffff; --ink: #1d1b18; --muted: #6b665d; --line: #e4dfd5;
+    --brand: #0f6b4f; --brand-ink: #ffffff; --warn: #a15c00; --warn-bg: #fff3dc;
+    --ok: #0f6b4f; --ok-bg: #e2f3ea; --bad: #a3271f; --bad-bg: #fbe5e3; --info: #22579a; --info-bg: #e3edf9;
+    --me: #dcf3e6; --bot: #ffffff; --owner: #e7eefb;
+    --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141311; --surface: #1d1b18; --ink: #f1ede6; --muted: #a59f94; --line: #34312c;
+      --brand: #3fbf8f; --brand-ink: #0d1f18; --warn: #f0b356; --warn-bg: #3a2c12;
+      --ok: #3fbf8f; --ok-bg: #143126; --bad: #f08a80; --bad-bg: #3a1a17; --info: #8ab4f0; --info-bg: #17263b;
+      --me: #1d3a2d; --bot: #24221e; --owner: #1c2a40; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .bar { max-width: 1100px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  .logo { font-weight: 700; letter-spacing: -.01em; }
+  .logo span { color: var(--brand); }
+  .shop { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .spacer { flex: 1; }
+  nav { max-width: 1100px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; }
+  nav button { background: none; border: 0; padding: 10px 12px; border-bottom: 2px solid transparent; color: var(--muted); cursor: pointer; }
+  nav button.active { color: var(--ink); border-color: var(--brand); font-weight: 600; }
+  nav .count { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--warn-bg); color: var(--warn); font-size: 12px; font-weight: 600; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); }
+  .stat .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat .v { font-size: 22px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+  .chip.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .between { justify-content: space-between; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .b-AwaitingPayment { background: var(--warn-bg); color: var(--warn); }
+  .b-Paid { background: var(--ok-bg); color: var(--ok); }
+  .b-Dispatched { background: var(--info-bg); color: var(--info); }
+  .b-Delivered { background: var(--line); color: var(--muted); }
+  .b-Cancelled, .b-Draft { background: var(--bad-bg); color: var(--bad); }
+  .b-owner { background: var(--warn-bg); color: var(--warn); }
+  .total { font-weight: 700; font-variant-numeric: tabular-nums; }
+  ul.items { margin: 8px 0; padding-left: 18px; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .btn.danger { color: var(--bad); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  a { color: var(--info); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+  /* Chats */
+  .chats { display: grid; grid-template-columns: 320px 1fr; gap: 12px; min-height: 70vh; }
+  .list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; max-height: 75vh; }
+  .conv { padding: 12px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .conv:hover, .conv.active { background: var(--bg); }
+  .thread { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; max-height: 75vh; }
+  .thread-head { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .msgs { flex: 1; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); }
+  .msg { max-width: 80%; padding: 8px 11px; border-radius: 10px; white-space: pre-wrap; word-wrap: break-word; box-shadow: var(--shadow); }
+  .msg .meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .msg.user { align-self: flex-start; background: var(--bot); border: 1px solid var(--line); }
+  .msg.assistant { align-self: flex-end; background: var(--me); }
+  .msg.owner { align-self: flex-end; background: var(--owner); }
+  .composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+  .composer textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); min-height: 42px; }
+  /* Products */
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  td input[type=text], td input[type=number] { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; background: var(--bg); }
+  td input[type=number] { max-width: 110px; }
+  .table-wrap { overflow-x: auto; }
+  /* Login */
+  .login { max-width: 360px; margin: 12vh auto; }
+  .login input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 10px 0; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; display: none; z-index: 20; max-width: calc(100% - 32px); }
+  .hidden { display: none !important; }
+  @media (max-width: 720px) {
+    .chats { grid-template-columns: 1fr; }
+    .chats.open .list { display: none; }
+    .chats:not(.open) .thread { display: none; }
+    .msg { max-width: 92%; }
+    .stat .v { font-size: 19px; }
+    #updated, .shop { display: none; }
+  }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 3px; }
+</style>
+</head>
+<body>
+
+<section id="login" class="login hidden">
+  <div class="card">
+    <div class="logo" style="font-size:20px">soko<span>ni</span></div>
+    <p class="muted small">Owner dashboard. Enter the admin key from your settings.</p>
+    <form id="loginForm">
+      <input id="keyInput" type="password" placeholder="Admin key" autocomplete="current-password" required>
+      <button class="btn primary" style="width:100%">Open dashboard</button>
+    </form>
+    <p id="loginError" class="small" style="color:var(--bad)"></p>
+  </div>
+</section>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="bar">
+      <div class="logo">soko<span>ni</span></div>
+      <div class="shop" id="shopName"></div>
+      <div class="spacer"></div>
+      <span class="muted small" id="updated"></span>
+      <button class="btn small" id="logout">Log out</button>
+    </div>
+    <nav>
+      <button data-tab="orders" class="active">Orders</button>
+      <button data-tab="chats">Chats <span class="count hidden" id="needsYou"></span></button>
+      <button data-tab="products">Products</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="tab-orders">
+      <div class="stats" id="stats"></div>
+      <div class="chips" id="orderFilters"></div>
+      <div class="grid" id="orders"></div>
+    </section>
+
+    <section id="tab-chats" class="hidden">
+      <div class="chats" id="chatsLayout">
+        <div class="list" id="convList"></div>
+        <div class="thread">
+          <div class="thread-head row between">
+            <div class="row">
+              <button class="btn small" id="backToList" title="Back">←</button>
+              <div>
+                <div id="threadTitle" style="font-weight:600">Select a chat</div>
+                <div id="threadSub" class="muted small"></div>
+              </div>
+            </div>
+            <button class="btn small hidden" id="takeoverBtn"></button>
+          </div>
+          <div class="msgs" id="msgs"></div>
+          <form class="composer hidden" id="composer">
+            <textarea id="replyText" rows="1" placeholder="Reply as the owner…"></textarea>
+            <button class="btn primary">Send</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-products" class="hidden">
+      <div class="row between" style="margin-bottom:12px">
+        <div class="muted small">Prices and stock here are exactly what the assistant quotes.</div>
+        <button class="btn primary" id="addProduct">Add product</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Category</th><th>Price (KES)</th><th>Stock</th><th>Active</th><th></th></tr></thead>
+          <tbody id="products"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const STATUSES = ["AwaitingPayment", "Paid", "Dispatched", "Delivered", "Cancelled"];
+  const LABEL = { AwaitingPayment: "Awaiting payment", Paid: "Paid", Dispatched: "On the way", Delivered: "Delivered", Cancelled: "Cancelled", Draft: "Draft" };
+  const CHANNEL = { 1: "WhatsApp", 2: "Instagram", 9: "Test chat" };
+  const NEXT = {
+    Paid: [["Dispatched", "Mark on the way", "primary"], ["Cancelled", "Cancel", "danger"]],
+    Dispatched: [["Delivered", "Mark delivered", "primary"]],
+    AwaitingPayment: [["Cancelled", "Cancel", "danger"]]
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const state = { key: null, filter: "", orders: [], convs: [], products: [], activeConv: null, tab: "orders" };
+
+  // ---------- helpers ----------
+  const store = {
+    get: () => { try { return localStorage.getItem("sokoni.adminKey"); } catch { return null; } },
+    set: (v) => { try { localStorage.setItem("sokoni.adminKey", v); } catch {} },
+    clear: () => { try { localStorage.removeItem("sokoni.adminKey"); } catch {} }
+  };
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const kes = (n) => "KES " + Number(n || 0).toLocaleString("en-KE", { maximumFractionDigits: 0 });
+  // The database stores UTC without a zone marker.
+  const asDate = (s) => s ? new Date(/[zZ]|[+-]\d\d:\d\d$/.test(s) ? s : s + "Z") : null;
+  const when = (s) => {
+    const d = asDate(s); if (!d) return "";
+    const today = new Date().toDateString() === d.toDateString();
+    return today ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                 : d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.style.display = "block";
+    clearTimeout(toast._t); toast._t = setTimeout(() => (t.style.display = "none"), 3200);
+  }
+
+  async function api(path, opts = {}) {
+    const res = await fetch("/api/admin" + path, {
+      ...opts,
+      headers: { "X-Admin-Key": state.key, ...(opts.body ? { "Content-Type": "application/json" } : {}), ...(opts.headers || {}) }
+    });
+    if (res.status === 401) { logout(); throw new Error("Wrong admin key."); }
+    if (!res.ok) throw new Error((await res.text()) || res.statusText);
+    return res.status === 204 ? null : res.json();
+  }
+
+  // ---------- login ----------
+  async function login(key) {
+    state.key = key;
+    try {
+      await api("/products");
+      store.set(key);
+      $("login").classList.add("hidden");
+      $("app").classList.remove("hidden");
+      $("shopName").textContent = "Owner dashboard";
+      await refreshAll();
+      startPolling();
+    } catch (e) {
+      $("loginError").textContent = e.message;
+      $("login").classList.remove("hidden");
+      $("app").classList.add("hidden");
+    }
+  }
+  function logout() {
+    store.clear(); state.key = null; stopPolling();
+    $("app").classList.add("hidden"); $("login").classList.remove("hidden");
+  }
+  $("loginForm").addEventListener("submit", (e) => { e.preventDefault(); $("loginError").textContent = ""; login($("keyInput").value.trim()); });
+  $("logout").addEventListener("click", logout);
+
+  // ---------- tabs ----------
+  document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => {
+    state.tab = b.dataset.tab;
+    document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("active", x === b));
+    ["orders", "chats", "products"].forEach((t) => $("tab-" + t).classList.toggle("hidden", t !== state.tab));
+    if (state.tab === "products") loadProducts();
+  }));
+
+  // ---------- data ----------
+  async function refreshAll() {
+    const [orders, convs] = await Promise.all([api("/orders"), api("/conversations")]);
+    state.orders = orders; state.convs = convs;
+    renderStats(); renderFilters(); renderOrders(); renderConvs();
+    if (state.activeConv) await loadThread(state.activeConv, true);
+    $("updated").textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  let poll;
+  function startPolling() { stopPolling(); poll = setInterval(() => refreshAll().catch(() => {}), 8000); }
+  function stopPolling() { clearInterval(poll); }
+
+  const convById = (id) => state.convs.find((c) => c.id === id);
+  const customerLabel = (c) => c ? (c.customerName || (c.phone ? "+" + c.phone : c.customerId)) : "Customer";
+
+  // ---------- orders ----------
+  function renderStats() {
+    const today = new Date().toDateString();
+    const paidToday = state.orders.filter((o) => o.paidAt && asDate(o.paidAt).toDateString() === today);
+    const toDispatch = state.orders.filter((o) => o.status === "Paid").length;
+    const awaiting = state.orders.filter((o) => o.status === "AwaitingPayment").length;
+    const needsYou = state.convs.filter((c) => c.humanTakeover).length;
+    const tiles = [
+      ["Sales today", kes(paidToday.reduce((s, o) => s + o.total, 0))],
+      ["Paid orders today", paidToday.length],
+      ["To dispatch", toDispatch],
+      ["Awaiting payment", awaiting],
+      ["Chats needing you", needsYou]
+    ];
+    $("stats").innerHTML = tiles.map(([k, v]) => `<div class="stat"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("");
+    const badge = $("needsYou");
+    badge.textContent = needsYou; badge.classList.toggle("hidden", needsYou === 0);
+  }
+
+  function renderFilters() {
+    const opts = [["", "All"], ...STATUSES.map((s) => [s, LABEL[s]])];
+    $("orderFilters").innerHTML = opts.map(([v, l]) => {
+      const n = v ? state.orders.filter((o) => o.status === v).length : state.orders.length;
+      return `<button class="chip ${state.filter === v ? "active" : ""}" data-f="${v}">${esc(l)} · ${n}</button>`;
+    }).join("");
+    $("orderFilters").querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => { state.filter = c.dataset.f; renderFilters(); renderOrders(); }));
+  }
+
+  function renderOrders() {
+    const list = state.filter ? state.orders.filter((o) => o.status === state.filter) : state.orders;
+    if (!list.length) { $("orders").innerHTML = `<div class="empty card">No orders here yet. They appear as soon as a customer asks to pay.</div>`; return; }
+    $("orders").innerHTML = list.map((o) => {
+      const c = convById(o.conversationId);
+      const items = o.lines.map((l) => `<li>${esc(l.quantity)} × ${esc(l.productName)} <span class="muted">${kes(l.unitPrice * l.quantity)}</span></li>`).join("");
+      const actions = (NEXT[o.status] || []).map(([s, l, cls]) => `<button class="btn ${cls}" data-order="${o.id}" data-status="${s}">${esc(l)}</button>`).join("");
+      return `<article class="card">
+        <div class="row between"><strong>#${o.id}</strong><span class="badge b-${esc(o.status)}">${esc(LABEL[o.status] || o.status)}</span></div>
+        <div class="row between small" style="margin-top:4px">
+          <span>${esc(customerLabel(c))} <span class="muted">· ${esc(CHANNEL[c?.channel] || "")}</span></span>
+          <span class="muted">${esc(when(o.paidAt || o.createdAt))}</span>
+        </div>
+        <ul class="items">${items}</ul>
+        <div class="small muted">Delivery ${kes(o.deliveryFee)}</div>
+        <div class="row between" style="margin-top:6px"><span class="total">${kes(o.total)}</span>${o.mpesaReceipt ? `<span class="small muted">M-Pesa ${esc(o.mpesaReceipt)}</span>` : ""}</div>
+        <div class="small" style="margin-top:8px">📍 ${esc(o.deliveryArea || "No area given")}${o.mapsLink ? ` · <a href="${esc(o.mapsLink)}" target="_blank" rel="noopener">Map</a>` : ""}</div>
+        ${o.deliveryNotes ? `<div class="small muted">${esc(o.deliveryNotes)}</div>` : ""}
+        ${o.lastPaymentError ? `<div class="small" style="color:var(--bad)">Last payment failed: ${esc(o.lastPaymentError)}</div>` : ""}
+        <div class="actions">${actions}${c ? `<button class="btn" data-chat="${c.id}">Open chat</button>` : ""}</div>
+      </article>`;
+    }).join("");
+
+    $("orders").querySelectorAll("[data-status]").forEach((b) => b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { await api(`/orders/${b.dataset.order}/status`, { method: "POST", body: JSON.stringify({ status: b.dataset.status }) }); toast("Updated. The customer has been notified."); await refreshAll(); }
+      catch (e) { toast(e.message); b.disabled = false; }
+    }));
+    $("orders").querySelectorAll("[data-chat]").forEach((b) => b.addEventListener("click", () => {
+      document.querySelector('nav button[data-tab="chats"]').click();
+      openConv(Number(b.dataset.chat));
+    }));
+  }
+
+  // ---------- chats ----------
+  function renderConvs() {
+    if (!state.convs.length) { $("convList").innerHTML = `<div class="empty">No chats yet.</div>`; return; }
+    $("convList").innerHTML = state.convs.map((c) => `
+      <div class="conv ${state.activeConv === c.id ? "active" : ""}" data-id="${c.id}">
+        <div class="row between"><strong>${esc(customerLabel(c))}</strong><span class="small muted">${esc(when(c.lastInboundAt || c.createdAt))}</span></div>
+        <div class="row between small"><span class="muted">${esc(CHANNEL[c.channel] || "")}</span>${c.humanTakeover ? `<span class="badge b-owner">Needs you</span>` : `<span class="muted">Assistant</span>`}</div>
+      </div>`).join("");
+    $("convList").querySelectorAll(".conv").forEach((el) => el.addEventListener("click", () => openConv(Number(el.dataset.id))));
+  }
+
+  async function openConv(id) {
+    state.activeConv = id;
+    $("chatsLayout").classList.add("open");
+    renderConvs();
+    await loadThread(id, false);
+  }
+  $("backToList").addEventListener("click", () => { $("chatsLayout").classList.remove("open"); });
+
+  async function loadThread(id, quiet) {
+    const c = convById(id);
+    if (!c) return;
+    const msgs = await api(`/conversations/${id}/messages`);
+    const box = $("msgs");
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    $("threadTitle").textContent = customerLabel(c);
+    $("threadSub").textContent = [CHANNEL[c.channel], c.phone ? "+" + c.phone : null].filter(Boolean).join(" · ");
+    const who = { user: "Customer", assistant: "Assistant", owner: "You" };
+    // Show voice notes and photos with a friendly label instead of the agent's bracketed note.
+    const pretty = (text) => {
+      let s = String(text ?? "");
+      s = s.replace(/^\[Voice note, transcribed automatically[^\]]*\]\s*/m, "\u0000VOICE\u0000");
+      s = s.replace(/^\[Sent a photo\. It shows: ([\s\S]*?)\]$/m, "\u0000PHOTO\u0000$1");
+      return esc(s)
+        .replace("\u0000VOICE\u0000", `<span class="tag">🎤 Voice note (transcribed)</span><br>`)
+        .replace("\u0000PHOTO\u0000", `<span class="tag">📷 Photo</span><br>`);
+    };
+    box.innerHTML = msgs.filter((m) => who[m.role]).map((m) =>
+      `<div class="msg ${m.role}">${pretty(m.content)}<div class="meta">${who[m.role]} · ${esc(when(m.createdAt))}</div></div>`).join("") ||
+      `<div class="empty">No messages.</div>`;
+    if (!quiet || atBottom) box.scrollTop = box.scrollHeight;
+
+    const tb = $("takeoverBtn");
+    tb.classList.remove("hidden");
+    tb.textContent = c.humanTakeover ? "Hand back to assistant" : "Take over chat";
+    tb.className = "btn small " + (c.humanTakeover ? "primary" : "");
+    $("composer").classList.remove("hidden");
+  }
+
+  $("takeoverBtn").addEventListener("click", async () => {
+    const c = convById(state.activeConv); if (!c) return;
+    try {
+      await api(`/conversations/${c.id}/takeover`, { method: "POST", body: JSON.stringify({ on: !c.humanTakeover }) });
+      toast(c.humanTakeover ? "The assistant is back on this chat." : "You've taken over. The assistant will stay quiet.");
+      await refreshAll();
+    } catch (e) { toast(e.message); }
+  });
+
+  $("composer").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = $("replyText").value.trim();
+    if (!text || !state.activeConv) return;
+    try {
+      await api(`/conversations/${state.activeConv}/reply`, { method: "POST", body: JSON.stringify({ text }) });
+      $("replyText").value = "";
+      await refreshAll();
+    } catch (err) { toast(err.message); }
+  });
+  $("replyText").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("composer").requestSubmit(); } });
+
+  // ---------- products ----------
+  async function loadProducts() {
+    try { state.products = await api("/products"); renderProducts(); } catch (e) { toast(e.message); }
+  }
+  function productRow(p) {
+    return `<tr data-id="${p.id || 0}">
+      <td><input type="text" data-k="name" value="${esc(p.name)}" placeholder="Product name"><input type="text" data-k="description" value="${esc(p.description || "")}" placeholder="Short description" class="small" style="margin-top:4px"></td>
+      <td><input type="text" data-k="category" value="${esc(p.category || "")}" placeholder="Category"></td>
+      <td><input type="number" data-k="price" min="1" step="1" value="${esc(p.price ?? "")}"></td>
+      <td><input type="number" data-k="stock" min="0" step="1" value="${esc(p.stock ?? 0)}"></td>
+      <td><input type="checkbox" data-k="active" ${p.active !== false ? "checked" : ""}></td>
+      <td><button class="btn small primary" data-save>Save</button></td>
+    </tr>`;
+  }
+  function renderProducts() {
+    $("products").innerHTML = state.products.map(productRow).join("") || `<tr><td colspan="6" class="empty">No products yet.</td></tr>`;
+    wireProductRows();
+  }
+  function wireProductRows() {
+    $("products").querySelectorAll("[data-save]").forEach((b) => b.onclick = async () => {
+      const tr = b.closest("tr");
+      const get = (k) => tr.querySelector(`[data-k="${k}"]`);
+      const body = {
+        id: Number(tr.dataset.id), name: get("name").value.trim(), description: get("description").value.trim() || null,
+        category: get("category").value.trim() || null, price: Number(get("price").value), stock: Number(get("stock").value || 0),
+        active: get("active").checked
+      };
+      if (!body.name || !(body.price > 0)) { toast("Name and a price above 0 are required."); return; }
+      b.disabled = true;
+      try { const r = await api("/products", { method: "POST", body: JSON.stringify(body) }); tr.dataset.id = r.id; toast("Saved. The assistant uses this right away."); }
+      catch (e) { toast(e.message); }
+      b.disabled = false;
+    });
+  }
+  $("addProduct").addEventListener("click", () => {
+    $("products").insertAdjacentHTML("afterbegin", productRow({ id: 0, name: "", price: "", stock: 0, active: true }));
+    wireProductRows();
+    $("products").querySelector('tr [data-k="name"]').focus();
+  });
+
+  // ---------- start ----------
+  const saved = store.get();
+  if (saved) login(saved); else $("login").classList.remove("hidden");
+})();
+</script>
+</body>
+</html>
